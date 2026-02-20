@@ -23,7 +23,7 @@
       "dest": "/api/admin.js"
     },
     {
-      "src": "/api/(.*)",
+      "src": "/api/chat(.*)",
       "dest": "/api/index.js"
     },
     {
@@ -31,8 +31,5 @@
       "dest": "/client/dist/$1"
     }
   ],
-  "env": {
-    "NODE_ENV": "production"
-  },
   "buildCommand": "npm install && npm run build"
 }

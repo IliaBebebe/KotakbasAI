@@ -1,35 +1,56 @@
-const Settings = require('../server/models/Settings');
-const Chat = require('../server/models/Chat');
 const mongoose = require('mongoose');
 
-const ADMIN_PASSWORD = 'Жопа';
+const MONGODB_URI = process.env.MONGODB_URI;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Жопа';
 
-async function connectDB() {
+const messageSchema = new mongoose.Schema({
+  role: { type: String, enum: ['user', 'assistant'], required: true },
+  content: { type: String, required: true },
+  isAiGenerated: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const chatSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
+  title: { type: String, default: 'New Chat' },
+  messages: [messageSchema],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const settingsSchema = new mongoose.Schema({
+  systemPrompt: { type: String, default: 'Вы - полезный ассистент' },
+  aiModel: { type: String, default: 'meta-llama/llama-3.2-3b-instruct:free' },
+  maxTokens: { type: Number, default: 4000 },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+let Chat, Settings;
+
+async function initDB() {
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(MONGODB_URI);
+    Chat = mongoose.model('Chat', chatSchema);
+    Settings = mongoose.model('Settings', settingsSchema);
   }
+  return { Chat, Settings };
 }
 
 export default async function handler(req, res) {
-  // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-password');
   
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Check admin password
   const password = req.headers['x-admin-password'];
   if (password !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Неверный пароль' });
   }
 
   try {
-    await connectDB();
+    const { Chat, Settings } = await initDB();
 
-    // GET /api/admin/settings
     if (req.method === 'GET' && req.url.includes('/settings')) {
       let settings = await Settings.findOne();
       if (!settings) {
@@ -39,10 +60,8 @@ export default async function handler(req, res) {
       return res.status(200).json(settings);
     }
 
-    // PUT /api/admin/settings
     if (req.method === 'PUT' && req.url.includes('/settings')) {
       const { systemPrompt, aiModel, maxTokens } = req.body;
-      
       let settings = await Settings.findOne();
       if (!settings) {
         settings = new Settings({ systemPrompt, aiModel, maxTokens });
@@ -50,65 +69,43 @@ export default async function handler(req, res) {
         if (systemPrompt !== undefined) settings.systemPrompt = systemPrompt;
         if (aiModel !== undefined) settings.aiModel = aiModel;
         if (maxTokens !== undefined) settings.maxTokens = maxTokens;
-        settings.updatedAt = Date.now();
       }
-      
       await settings.save();
       return res.status(200).json(settings);
     }
 
-    // GET /api/admin/chats
-    if (req.method === 'GET') {
-      const chats = await Chat.find()
-        .sort({ updatedAt: -1 })
-        .select('_id userId title messages createdAt updatedAt');
+    if (req.method === 'GET' && !req.url.includes('/reply')) {
+      const { id } = req.query;
+      if (id) {
+        const chat = await Chat.findOne({ _id: id });
+        if (!chat) return res.status(404).json({ error: 'Not found' });
+        return res.status(200).json(chat);
+      }
+      const chats = await Chat.find().sort({ updatedAt: -1 });
       return res.status(200).json(chats);
     }
 
-    // GET /api/admin/chats/:id
-    if (req.method === 'GET' && req.query.id) {
-      const chat = await Chat.findOne({ _id: req.query.id });
-      if (!chat) {
-        return res.status(404).json({ error: 'Чат не найден' });
-      }
-      return res.status(200).json(chat);
-    }
-
-    // POST /api/admin/chats/:id/reply
     if (req.method === 'POST' && req.url.includes('/reply')) {
       const { message } = req.body;
       const chatId = req.query.id;
-      
-      if (!message) {
-        return res.status(400).json({ error: 'Сообщение обязательно' });
-      }
-
+      if (!message) return res.status(400).json({ error: 'Message required' });
       const chat = await Chat.findOne({ _id: chatId });
-      if (!chat) {
-        return res.status(404).json({ error: 'Чат не найден' });
-      }
-
-      chat.messages.push({
-        role: 'assistant',
-        content: message,
-        isAiGenerated: false
-      });
-
+      if (!chat) return res.status(404).json({ error: 'Not found' });
+      chat.messages.push({ role: 'assistant', content: message, isAiGenerated: false });
       await chat.save();
-
-      return res.status(200).json({ success: true, message: 'Ответ отправлен успешно' });
+      return res.status(200).json({ success: true });
     }
 
-    // DELETE /api/admin/chats/:id
-    if (req.method === 'DELETE' && req.query.id) {
-      await Chat.deleteOne({ _id: req.query.id });
+    if (req.method === 'DELETE') {
+      const chatId = req.query.id;
+      await Chat.deleteOne({ _id: chatId });
       return res.status(200).json({ success: true });
     }
 
     return res.status(404).json({ error: 'Not found' });
 
   } catch (error) {
-    console.error('Vercel Admin API error:', error);
-    return res.status(500).json({ error: 'Failed to process request', details: error.message });
+    console.error('Admin API Error:', error.message);
+    return res.status(500).json({ error: error.message });
   }
 }
