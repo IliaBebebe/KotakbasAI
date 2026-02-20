@@ -9,18 +9,26 @@
       }
     },
     {
-      "src": "server/index.js",
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/admin.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
+      "src": "/api/admin(.*)",
+      "dest": "/api/admin.js"
+    },
+    {
       "src": "/api/(.*)",
-      "dest": "server/index.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "client/dist/$1"
+      "dest": "/client/dist/$1"
     }
   ],
   "env": {
