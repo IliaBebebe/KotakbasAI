@@ -7,6 +7,7 @@
     "dev:client": "vite client",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "build": "vite build client",
+    "build:vercel": "npm install && npm run build",
     "start": "node server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
