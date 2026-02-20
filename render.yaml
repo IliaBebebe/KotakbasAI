@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: kotakbasai
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_API_URL
+        value: https://openrouter.ai/api/v1/chat/completions
+      - key: AI_MODEL
+        value: meta-llama/llama-3.2-3b-instruct:free
+      - key: ADMIN_PASSWORD
+        sync: false
