@@ -47,7 +47,7 @@
 | **GitHub** | Хранение кода | Бесплатно |
 | **MongoDB Atlas** | База данных | Бесплатно (512 MB) |
 | **Render** | Full Stack (Node.js + React) | Бесплатно |
-| **Vercel** | Full Stack (Node.js + React) | Бесплатно |
+| **Vercel** | Full Stack (Serverless Functions + Static) | Бесплатно |
 | **OpenRouter** | ИИ API | Бесплатные модели |
 
 **Время на деплой:** ~30-45 минут на каждую платформу
@@ -62,7 +62,7 @@
 # В папке проекта
 git init
 git add .
-git commit -m "Initial commit: KotakbasAI v1.0"
+git commit -m "Initial commit: KotakbasAI v2.0"
 git branch -M main
 git remote add origin https://github.com/ВАШ_НИК/kotakbasai.git
 git push -u origin main
@@ -119,8 +119,7 @@ dist/
 | Key | Value |
 |-----|-------|
 | `NODE_ENV` | `production` |
-| `PORT` | `10000` (Render автоматически установит) |
-| `MONGODB_URI` | `mongodb+srv://user:pass@cluster.mongodb.net/kotakbasai?retryWrites=true&w=majority` |
+| `MONGODB_URI` | `mongodb+srv://rex_corp:j52zsm%25Z@kotakbasai.a57iqj7.mongodb.net/kotakbasai?retryWrites=true&w=majority` |
 | `AI_API_KEY` | `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` |
 | `AI_API_URL` | `https://openrouter.ai/api/v1/chat/completions` |
 | `AI_MODEL` | `meta-llama/llama-3.2-3b-instruct:free` |
@@ -131,37 +130,13 @@ dist/
 - `@` → `%40`
 - `%` → `%25`
 
-### Шаг 4: Обновите `server/index.js` для Render
-
-Render автоматически устанавливает `PORT` в переменной окружения. Убедитесь, что `server/index.js` использует `process.env.PORT`:
-
-```javascript
-const PORT = process.env.PORT || 5000;
-```
-
-### Шаг 5: Настройте serving статики
-
-В `server/index.js` добавьте serving frontend после билда:
-
-```javascript
-const path = require('path');
-
-// Serve static files from Vite build
-app.use(express.static(path.join(__dirname, '../client/dist')));
-
-// Handle React routing - return index.html for all non-API routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-});
-```
-
-### Шаг 6: Задеплойте
+### Шаг 4: Задеплойте
 
 1. Нажмите **Create Web Service**
 2. Подождите 5-7 минут (Build → Deploy)
 3. Скопируйте URL сервиса, например: `https://kotakbasai.onrender.com`
 
-### Шаг 7: Проверьте
+### Шаг 5: Проверьте
 
 Откройте `https://kotakbasai.onrender.com` в браузере.
 
@@ -171,114 +146,29 @@ app.get('*', (req, res) => {
 
 ### Что будет
 
-- **Backend:** Vercel Serverless Functions (API routes)
+- **Backend:** Vercel Serverless Functions (`api/`)
 - **Frontend:** Vite build (статические файлы)
 - **URL:** `https://kotakbasai.vercel.app`
 
 ### Шаг 1: Подготовьте проект для Vercel
 
-Vercel требует другую структуру для backend. Создайте `api/` директорию:
+Проект уже готов! Файлы:
+- `api/index.js` — chat API
+- `api/admin.js` — admin API
+- `vercel.json` — конфигурация
 
-```bash
-mkdir api
-```
-
-Создайте `api/index.js` (прокси для всех API запросов):
-
-```javascript
-const express = require('express');
-const cors = require('cors');
-const chatRoutes = require('../server/routes/chat');
-const adminRoutes = require('../server/routes/admin');
-
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-// Proxy to chat routes
-app.use('/api/chat', (req, res) => {
-  chatRoutes(req, res);
-});
-
-// Proxy to admin routes
-app.use('/api/admin', (req, res) => {
-  adminRoutes(req, res);
-});
-
-module.exports = app;
-```
-
-**ИЛИ** используйте Vercel-specific подход с отдельными функциями:
-
-Создайте `api/chat.js`:
-```javascript
-const Chat = require('../server/models/Chat');
-const { getAiResponse } = require('../server/services/ai');
-
-module.exports = async (req, res) => {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  if (req.method === 'POST') {
-    const { chatId, message, userId } = req.body;
-    // ... логика из server/routes/chat.js
-  }
-};
-```
-
-### Шаг 2: Создайте `vercel.json` в корне
-
-```json
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    },
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/client/dist/$1"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
-}
-```
-
-### Шаг 3: Создайте аккаунт на Vercel
+### Шаг 2: Создайте аккаунт на Vercel
 
 1. Перейдите на https://vercel.com
 2. Зарегистрируйтесь через GitHub
 
-### Шаг 4: Импортируйте проект
+### Шаг 3: Импортируйте проект
 
 1. Нажмите **Add New...** → **Project**
 2. Найдите репозиторий `kotakbasai`
 3. Нажмите **Import**
 
-### Шаг 5: Настройте проект
+### Шаг 4: Настройте проект
 
 | Поле | Значение |
 |------|----------|
@@ -288,25 +178,25 @@ module.exports = async (req, res) => {
 | **Output Directory** | `client/dist` |
 | **Install Command** | `npm install` |
 
-### Шаг 6: Добавьте переменные окружения
+### Шаг 5: Добавьте переменные окружения
 
 Раскройте **Environment Variables** → **Add**:
 
 | Key | Value |
 |-----|-------|
-| `MONGODB_URI` | `mongodb+srv://user:pass@cluster.mongodb.net/kotakbasai?retryWrites=true&w=majority` |
+| `MONGODB_URI` | `mongodb+srv://rex_corp:j52zsm%25Z@kotakbasai.a57iqj7.mongodb.net/kotakbasai?retryWrites=true&w=majority` |
 | `AI_API_KEY` | `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` |
 | `AI_API_URL` | `https://openrouter.ai/api/v1/chat/completions` |
 | `AI_MODEL` | `meta-llama/llama-3.2-3b-instruct:free` |
 | `ADMIN_PASSWORD` | `Жопа` |
 
-### Шаг 7: Задеплойте
+### Шаг 6: Задеплойте
 
 1. Нажмите **Deploy**
 2. Подождите 3-5 минут
 3. Скопируйте URL, например: `https://kotakbasai.vercel.app`
 
-### Шаг 8: Проверьте
+### Шаг 7: Проверьте
 
 Откройте `https://kotakbasai.vercel.app` в браузере.
 
@@ -406,7 +296,19 @@ module.exports = async (req, res) => {
 - Уменьшите размер статики (оптимизируйте изображения)
 - Upgrade к Pro ($20/месяц)
 
-### 5. Render: Build failed
+### 5. Vercel: API не работает (500 error)
+
+**Симптом:** `500 Internal Server Error` при отправке сообщения
+
+**Причина:** Не настроены Environment Variables или ошибка в serverless функции
+
+**Решение:**
+1. Проверьте **Vercel Dashboard** → **Settings** → **Environment Variables**
+2. Убедитесь что все переменные добавлены (см. выше)
+3. Проверьте **Function Logs** для деталей ошибки
+4. Сделайте **Redeploy** после добавления переменных
+
+### 6. Render: Build failed
 
 **Ошибка:** `Build failed` или `Crash`
 
@@ -419,7 +321,7 @@ module.exports = async (req, res) => {
 # - Ошибка в .env переменных
 ```
 
-### 6. MongoDB не подключается
+### 7. MongoDB не подключается
 
 **Ошибка:** `MongoServerError: Authentication failed`
 
@@ -428,18 +330,15 @@ module.exports = async (req, res) => {
 - Убедитесь, что пароль URL-encoded
 - Проверьте Network Access (0.0.0.0/0)
 
-### 7. Админка не работает (кириллица в пароле)
+### 8. Админка не работает (кириллица в пароле)
 
 **Ошибка:** `Неверный пароль` при правильном вводе
 
 **Решение:**
 Проблема в кодировке кириллицы. Используйте латинский пароль:
 ```javascript
-// server/routes/admin.js
-const ADMIN_PASSWORD = 'Zhopa123!';
-
-// client/src/pages/AdminPanel.jsx
-if (password === 'Zhopa123!') { ... }
+// api/admin.js
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Zhopa123!';
 ```
 
 ---
@@ -535,7 +434,7 @@ if (password === 'Zhopa123!') { ... }
 │  ┌──────────────┐  ┌─────────────┐ │
 │  │   Serverless │  │   Vite      │ │
 │  │   Functions  │─▶│   (Static)  │ │
-│  │   (API)      │  │   React     │ │
+│  │   (api/)     │  │   React     │ │
 │  └──────────────┘  └─────────────┘ │
 │           │                         │
 │           ▼                         │
@@ -556,11 +455,31 @@ if (password === 'Zhopa123!') { ... }
 
 ```env
 NODE_ENV=production
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/kotakbasai
-AI_API_KEY=sk-or-v1-...
+MONGODB_URI=mongodb+srv://rex_corp:j52zsm%25Z@kotakbasai.a57iqj7.mongodb.net/kotakbasai?retryWrites=true&w=majority
+AI_API_KEY=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
 AI_API_URL=https://openrouter.ai/api/v1/chat/completions
 AI_MODEL=meta-llama/llama-3.2-3b-instruct:free
-ADMIN_PASSWORD=Жопа (или Zhopa123!)
+ADMIN_PASSWORD=Жопа
+```
+
+### Структура файлов для деплоя
+
+```
+KotakbasAI/
+├── api/
+│   ├── index.js          # Vercel: Chat API
+│   └── admin.js          # Vercel: Admin API
+├── server/
+│   ├── index.js          # Render: Express server
+│   ├── models/
+│   ├── routes/
+│   └── services/
+├── client/
+│   ├── src/
+│   └── dist/             # Build output
+├── vercel.json           # Vercel конфигурация
+├── render.yaml           # Render конфигурация
+└── package.json
 ```
 
 ### Команды для деплоя
@@ -650,5 +569,5 @@ git push -u origin main
 ---
 
 **Последнее обновление:** Февраль 2025  
-**Версия документа:** 2.0.0 (Full Stack)  
+**Версия документа:** 2.1.0 (Vercel Serverless)  
 **Статус:** Production Ready

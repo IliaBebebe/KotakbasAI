@@ -14,6 +14,7 @@
 - Скрытые ответы от админа (пользователь не знает)
 - Тёмный дизайн (сине-серый + мятный акцент)
 - Русский интерфейс
+- Full Stack деплой на Render ИЛИ Vercel
 
 ---
 
@@ -35,8 +36,10 @@ MongoDB: Atlas (rex_corp / j52zsm%Z)
 | `client/src/pages/AdminPanel.jsx` | Админка |
 | `client/src/index.css` | Стили (сине-серая тема) |
 | `server/services/ai.js` | Логика ИИ + fallback |
-| `server/routes/admin.js` | Админ API |
-| `server/index.js` | Express + CORS |
+| `server/routes/admin.js` | Админ API (Render) |
+| `server/index.js` | Express + CORS + serving статики |
+| `api/index.js` | Chat API (Vercel serverless) |
+| `api/admin.js` | Admin API (Vercel serverless) |
 | `.env` | Ключи и подключения |
 
 ---
@@ -46,33 +49,34 @@ MongoDB: Atlas (rex_corp / j52zsm%Z)
 ```bash
 npm run dev        # Запуск dev-сервера
 npm run build      # Сборка продакшена
-npm start          # Запуск продакшена
+npm start          # Запуск продакшена (Render)
 ```
 
 ---
 
 ## 📦 Деплой
 
-См. **DEPLOY.md** для подробного руководства.
-
-**Важно:** Все сервисы на **бесплатных тарифах**:
-
-| Сервис | Free ограничения |
-|--------|------------------|
-| Render | Засыпает через 15 мин (30-60 сек холодный старт) |
-| Vercel | 100 GB трафика/месяц |
-| MongoDB | 512 MB (~50K сообщений) |
-
-**Кратко:**
+### Render (Full Stack)
 1. GitHub → `git push`
 2. MongoDB Atlas → кластер + user + network access
-3. Render → Full Stack (build: `npm install && npm run build`)
-4. Vercel → Full Stack (root: пустой, build: `npm run build`)
+3. Render → Web Service
+   - Build: `npm install && npm run build`
+   - Start: `node server/index.js`
+4. Env vars: MONGODB_URI, AI_API_KEY, AI_API_URL, AI_MODEL, ADMIN_PASSWORD
+
+### Vercel (Full Stack)
+1. GitHub → `git push`
+2. MongoDB Atlas → кластер + user + network access
+3. Vercel → Import Project
+   - Build: `npm run build`
+   - Output: `client/dist`
+4. Env vars: те же
+5. API routes: `api/index.js`, `api/admin.js`
 
 **Файлы для деплоя:**
-- `render.yaml` — конфигурация Render (обновлена для Full Stack)
-- `vercel.json` — конфигурация Vercel (Full Stack в корне)
-- `.env.example` — шаблон переменных
+- `render.yaml` — конфигурация Render
+- `vercel.json` — конфигурация Vercel
+- `api/` — serverless функции для Vercel
 - `server/index.js` — serving статики из `client/dist`
 
 ---
@@ -86,6 +90,8 @@ npm start          # Запуск продакшена
 | 401 в админке | Проверить заголовок `x-admin-password` |
 | CORS ошибки | Проверить allowedOrigins в `server/index.js` |
 | Кириллица в пароле | Использовать латиницу (Zhopa123!) |
+| Vercel 500 error | Проверить Environment Variables в Vercel Dashboard |
+| Render холодный старт | UptimeRobot для пинга или upgrade к Starter |
 
 ---
 
@@ -112,52 +118,31 @@ npm start          # Запуск продакшена
 5. [ ] Нет ошибок в консоли
 6. [ ] CORS настроен для продакшена
 7. [ ] Health check endpoint работает (`/health`)
+8. [ ] API routes работают (Vercel)
+9. [ ] Express server работает (Render)
+
+---
+
+## 🏗 Архитектура
+
+### Render
+```
+server/index.js → Express → API + Static (client/dist)
+                        ↓
+                   MongoDB Atlas → OpenRouter
+```
+
+### Vercel
+```
+api/index.js    → Serverless → Chat API
+api/admin.js    → Serverless → Admin API
+client/dist/    → Static     → Frontend
+                        ↓
+                   MongoDB Atlas → OpenRouter
+```
 
 ---
 
 **Совет:** Всегда читайте `CONTEXT.md` для понимания истории проекта.
 **Для деплоя:** Начните с `DEPLOYMENT_CHECKLIST.md` — отмечайте галочки по мере выполнения.
-
----
-
-## 🚀 Команды
-
-```bash
-npm run dev        # Запуск dev-сервера
-npm run build      # Сборка продакшена
-npm start          # Запуск продакшена
-```
-
----
-
-## 🐛 Частые проблемы
-
-| Проблема | Решение |
-|----------|---------|
-| MongoDB не подключается | Проверить IP whitelist в Atlas (0.0.0.0/0) |
-| ИИ возвращает fallback | Модель rate-limited, пробуем другую |
-| 401 в админке | Проверить заголовок `x-admin-password` |
-
----
-
-## 📚 Документация
-
-- **README.md** — основная документация
-- **DEVELOPMENT.md** — для разработчиков
-- **CONTEXT.md** — контекст проекта
-- **API.md** — API документация
-- **SESSION.md** — этот файл (быстрый старт)
-
----
-
-## ✅ Чеклист перед завершением задачи
-
-1. [ ] Код работает (`npm run dev`)
-2. [ ] Чат отвечает (ИИ или fallback)
-3. [ ] Админка открывается (пароль: Жопа)
-4. [ ] Стили не сломаны
-5. [ ] Нет ошибок в консоли
-
----
-
-**Совет:** Всегда читайте `CONTEXT.md` для понимания истории проекта.
+**Для Vercel:** Проверьте Environment Variables в Dashboard!
