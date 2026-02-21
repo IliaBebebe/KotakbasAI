@@ -3,3 +3,10 @@ dist/
 .env
 .DS_Store
 *.log
+
+# Documentation with sensitive data
+DEPLOY.md
+DEPLOYMENT_CHECKLIST.md
+CONTEXT.md
+SESSION.md
+API.md
