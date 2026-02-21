@@ -36,6 +36,9 @@ function ChatPage() {
   useEffect(() => {
     if (currentChat) {
       loadChatMessages(currentChat);
+    } else {
+      // If no current chat, clear messages
+      setMessages([]);
     }
   }, [currentChat]);
 
@@ -52,10 +55,14 @@ function ChatPage() {
   const loadChatMessages = async (chatId) => {
     try {
       const res = await fetch(`${API_URL}/${chatId}`);
+      if (!res.ok) {
+        throw new Error('Failed to load chat');
+      }
       const data = await res.json();
       setMessages(data.messages || []);
     } catch (error) {
       console.error('Не удалось загрузить сообщения:', error);
+      setMessages([]);
     }
   };
 
@@ -66,6 +73,7 @@ function ChatPage() {
 
   const selectChat = (chatId) => {
     setCurrentChat(chatId);
+    // Messages will be loaded by useEffect
   };
 
   const sendMessage = async (e) => {
@@ -104,9 +112,8 @@ function ChatPage() {
       const aiMessage = { role: 'assistant', content: data.message, isAiGenerated: true };
       setMessages(prev => [...prev, aiMessage]);
 
-      if (data.userId || !currentChat) {
-        loadChats();
-      }
+      // Always reload chats to get updated list
+      loadChats();
     } catch (error) {
       console.error('Не удалось отправить сообщение:', error);
       setMessages(prev => [...prev, { 

@@ -18,7 +18,8 @@ function AdminPanel() {
   const [settings, setSettings] = useState({
     systemPrompt: '',
     aiModel: 'meta-llama/llama-3.2-3b-instruct:free',
-    maxTokens: 4000
+    maxTokens: 4000,
+    autoReply: true
   });
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
@@ -292,6 +293,19 @@ function AdminPanel() {
                 onChange={(e) => setSettings({ ...settings, maxTokens: parseInt(e.target.value) })}
                 placeholder="4000"
               />
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={settings.autoReply}
+                  onChange={(e) => setSettings({ ...settings, autoReply: e.target.checked })}
+                  style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                />
+                <span>Автоматические ответы ИИ</span>
+              </label>
+              <small style={{ color: '#8b8ea3', marginTop: '-10px', marginBottom: '22px' }}>
+                Если отключено, ИИ не будет отвечать автоматически. Вы сможете отвечать вручную от имени ИИ.
+              </small>
 
               <button
                 className="btn-primary"

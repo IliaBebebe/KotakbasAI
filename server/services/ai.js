@@ -17,13 +17,20 @@ async function getAiResponse(messages) {
       settings = new Settings();
       await settings.save();
     }
-    
+
+    // Check if auto-reply is disabled
+    if (settings.autoReply === false) {
+      console.log('Auto-reply is disabled');
+      return null; // Return null to indicate no AI response
+    }
+
     const systemPrompt = settings.systemPrompt || 'Вы - полезный ассистент с искусственным интеллектом по имени KotakbasAI.';
     const model = settings.aiModel || process.env.AI_MODEL || FREE_MODELS[0];
-    
+
     console.log('Using model:', model);
     console.log('System prompt:', systemPrompt.substring(0, 50));
-    
+    console.log('Auto-reply:', settings.autoReply);
+
     const apiPayload = {
       model: model,
       messages: [
@@ -34,15 +41,15 @@ async function getAiResponse(messages) {
     };
 
     console.log('Calling OpenRouter API...');
-    
+
     // Try primary model first, then fallback to other free models
     const modelsToTry = [model, ...FREE_MODELS.filter(m => m !== model)];
-    
+
     for (const modelToTry of modelsToTry) {
       try {
         apiPayload.model = modelToTry;
         console.log(`Trying model: ${modelToTry}`);
-        
+
         const response = await axios.post(
           process.env.AI_API_URL,
           apiPayload,
@@ -58,7 +65,7 @@ async function getAiResponse(messages) {
 
         console.log('Response status:', response.status);
         console.log('API response:', JSON.stringify(response.data).substring(0, 100));
-        
+
         return response.data.choices[0].message.content;
       } catch (error) {
         if (error.response?.status === 429) {
@@ -68,7 +75,7 @@ async function getAiResponse(messages) {
         throw error;
       }
     }
-    
+
     throw new Error('All free models are rate-limited');
   } catch (error) {
     console.error('AI service error:', error.message);

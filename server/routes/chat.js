@@ -41,14 +41,16 @@ router.post('/', async (req, res) => {
     console.log('Getting AI response...');
     // Get AI response
     const aiResponse = await getAiResponse(chat.messages);
-    console.log('AI response received:', aiResponse.substring(0, 50));
-    
-    // Add AI message
-    chat.messages.push({
-      role: 'assistant',
-      content: aiResponse,
-      isAiGenerated: true
-    });
+    console.log('AI response received:', aiResponse ? aiResponse.substring(0, 50) : 'null');
+
+    // Add AI message only if auto-reply is enabled
+    if (aiResponse !== null) {
+      chat.messages.push({
+        role: 'assistant',
+        content: aiResponse,
+        isAiGenerated: true
+      });
+    }
 
     await chat.save();
     console.log('Chat saved:', chat._id);
