@@ -57,9 +57,9 @@ app.get('/health', (req, res) => {
 // Serve static files from Vite build (for Render full-stack deployment)
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
-  
-  // Handle React routing - return index.html for all non-API routes
-  app.get('*', (req, res) => {
+
+  // Handle React routing - return index.html for all non-API routes (Express 5 syntax)
+  app.get('/{*splat}', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
 }
