@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { FiSend, FiPlus, FiMessageSquare, FiSettings, FiHome } from 'react-icons/fi';
+import { FiSend, FiPlus, FiMessageSquare, FiSettings, FiHome, FiMenu, FiX } from 'react-icons/fi';
 
 const API_URL = '/api/chat';
 
@@ -15,6 +15,7 @@ function ChatPage() {
   const [userId, setUserId] = useState(() => {
     return localStorage.getItem('kotakbas_userId') || null;
   });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -128,6 +129,46 @@ function ChatPage() {
 
   return (
     <div className="app-container">
+      {/* Mobile Menu Overlay */}
+      <div className={`mobile-menu-overlay ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(false)} />
+
+      {/* Mobile Menu */}
+      <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+        <div className="mobile-menu-header">
+          <h4>
+            <span className="logo-icon">🧊</span>
+            KotakbasAI
+          </h4>
+          <button className="close-menu-btn" onClick={() => setMobileMenuOpen(false)}>
+            <FiX size={24} />
+          </button>
+        </div>
+        <button className="new-chat-btn mobile-new-chat" onClick={() => { createNewChat(); setMobileMenuOpen(false); }}>
+          <FiPlus size={20} strokeWidth={2.5} />
+          Новый чат
+        </button>
+        <div className="chat-list">
+          {chats.map(chat => (
+            <div
+              key={chat._id}
+              className={`chat-item ${currentChat === chat._id ? 'active' : ''}`}
+              onClick={() => { selectChat(chat._id); setMobileMenuOpen(false); }}
+            >
+              {chat.title}
+            </div>
+          ))}
+          {chats.length === 0 && (
+            <p style={{ padding: '24px', color: '#555', textAlign: 'center', fontSize: '0.9rem' }}>
+              История чатов пуста
+            </p>
+          )}
+        </div>
+        <Link to="/admin" className="admin-link" onClick={() => setMobileMenuOpen(false)}>
+          <FiSettings size={18} />
+          Панель администратора
+        </Link>
+      </div>
+
       {/* Sidebar */}
       <div className="sidebar">
         <div className="sidebar-header">
@@ -166,6 +207,9 @@ function ChatPage() {
       {/* Main Chat Area */}
       <div className="chat-area">
         <div className="chat-header">
+          <button className="menu-toggle-btn" onClick={() => setMobileMenuOpen(true)}>
+            <FiMenu size={24} />
+          </button>
           <h5>
             <span className="status-dot"></span>
             {currentChat ? 'Чат' : 'KotakbasAI'}

@@ -1,0 +1,33 @@
+{
+  "name": "KotakbasAI",
+  "short_name": "KotakbasAI",
+  "description": "Ваш персональный ИИ-ассистент",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1c23",
+  "theme_color": "#1a1c23",
+  "orientation": "portrait",
+  "ios": {
+    "supports_app_clip": false
+  },
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
