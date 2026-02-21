@@ -82,11 +82,11 @@ async function getAiResponse(messages, settings) {
   return 'Извините, но в данный момент я испытываю технические трудности.';
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-password');
-  
+
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
@@ -99,7 +99,7 @@ export default async function handler(req, res) {
 
       let chat;
       const newUserId = userId || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       if (chatId) {
         chat = await Chat.findOne({ _id: chatId });
         if (!chat) return res.status(404).json({ error: 'Chat not found' });
@@ -114,7 +114,7 @@ export default async function handler(req, res) {
 
       const settings = await Settings.findOne();
       const aiResponse = await getAiResponse(chat.messages, settings);
-      
+
       chat.messages.push({ role: 'assistant', content: aiResponse, isAiGenerated: true });
       await chat.save();
 
@@ -136,4 +136,4 @@ export default async function handler(req, res) {
     console.error('API Error:', error.message);
     return res.status(500).json({ error: error.message });
   }
-}
+};

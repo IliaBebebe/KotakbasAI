@@ -31,5 +31,6 @@
       "dest": "/$1"
     }
   ],
-  "buildCommand": "npm install && npm run build"
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "client/dist"
 }

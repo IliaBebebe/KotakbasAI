@@ -36,7 +36,7 @@ async function initDB() {
   return { Chat, Settings };
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-password');
@@ -108,4 +108,4 @@ export default async function handler(req, res) {
     console.error('Admin API Error:', error.message);
     return res.status(500).json({ error: error.message });
   }
-}
+};
