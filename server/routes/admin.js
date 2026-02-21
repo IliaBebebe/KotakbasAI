@@ -112,6 +112,26 @@ router.post('/chats/:id/reply', checkAuth, async (req, res) => {
   }
 });
 
+// Toggle auto-reply for a specific chat
+router.put('/chats/:id/toggle-auto-reply', checkAuth, async (req, res) => {
+  try {
+    const { disabled } = req.body;
+
+    const chat = await Chat.findOne({ _id: req.params.id });
+    if (!chat) {
+      return res.status(404).json({ error: 'Чат не найден' });
+    }
+
+    chat.autoReplyDisabled = disabled === true;
+    await chat.save();
+
+    res.json({ success: true, autoReplyDisabled: chat.autoReplyDisabled });
+  } catch (error) {
+    console.error('Toggle auto-reply error:', error);
+    res.status(500).json({ error: 'Не удалось переключить авто-ответы' });
+  }
+});
+
 // Delete chat
 router.delete('/chats/:id', checkAuth, async (req, res) => {
   try {

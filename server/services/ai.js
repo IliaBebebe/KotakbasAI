@@ -9,19 +9,19 @@ const FREE_MODELS = [
   'arcee-ai/trinity-large-preview:free'
 ];
 
-async function getAiResponse(messages) {
+async function getAiResponse(messages, chat = null) {
   try {
+    // Check if auto-reply is disabled for this specific chat
+    if (chat && chat.autoReplyDisabled === true) {
+      console.log('Auto-reply disabled for this chat');
+      return null;
+    }
+
     // Get or create settings
     let settings = await Settings.findOne();
     if (!settings) {
       settings = new Settings();
       await settings.save();
-    }
-
-    // Check if auto-reply is disabled
-    if (settings.autoReply === false) {
-      console.log('Auto-reply is disabled');
-      return null; // Return null to indicate no AI response
     }
 
     const systemPrompt = settings.systemPrompt || 'Вы - полезный ассистент с искусственным интеллектом по имени KotakbasAI.';

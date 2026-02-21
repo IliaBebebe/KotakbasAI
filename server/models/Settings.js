@@ -13,10 +13,6 @@ const settingsSchema = new mongoose.Schema({
     type: Number,
     default: 4000
   },
-  autoReply: {
-    type: Boolean,
-    default: true
-  },
   updatedAt: {
     type: Date,
     default: Date.now

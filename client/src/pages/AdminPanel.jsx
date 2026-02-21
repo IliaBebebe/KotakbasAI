@@ -18,14 +18,14 @@ function AdminPanel() {
   const [settings, setSettings] = useState({
     systemPrompt: '',
     aiModel: 'meta-llama/llama-3.2-3b-instruct:free',
-    maxTokens: 4000,
-    autoReply: true
+    maxTokens: 4000
   });
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [togglingAutoReply, setTogglingAutoReply] = useState(false);
   const [notification, setNotification] = useState(null);
 
   const messagesEndRef = useRef(null);
@@ -152,7 +152,7 @@ function AdminPanel() {
     if (!confirm('Вы уверены, что хотите удалить этот чат?')) return;
 
     try {
-      await fetch(`${API_URL}/chats/${chatId}`, { 
+      await fetch(`${API_URL}/chats/${chatId}`, {
         method: 'DELETE',
         headers: { 'x-admin-password': ADMIN_PASSWORD }
       });
@@ -164,6 +164,29 @@ function AdminPanel() {
     } catch (error) {
       console.error('Не удалось удалить чат:', error);
       showNotification('Не удалось удалить чат', 'error');
+    }
+  };
+
+  const toggleAutoReply = async (chatId, disabled) => {
+    setTogglingAutoReply(true);
+    try {
+      const res = await fetch(`${API_URL}/chats/${chatId}/toggle-auto-reply`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': ADMIN_PASSWORD
+        },
+        body: JSON.stringify({ disabled })
+      });
+      await res.json();
+      showNotification(disabled ? 'Авто-ответы отключены' : 'Авто-ответы включены', 'success');
+      loadChatDetails(chatId);
+      loadChats();
+    } catch (error) {
+      console.error('Не удалось переключить авто-ответы:', error);
+      showNotification('Не удалось переключить авто-ответы', 'error');
+    } finally {
+      setTogglingAutoReply(false);
     }
   };
 
@@ -294,19 +317,6 @@ function AdminPanel() {
                 placeholder="4000"
               />
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={settings.autoReply}
-                  onChange={(e) => setSettings({ ...settings, autoReply: e.target.checked })}
-                  style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                />
-                <span>Автоматические ответы ИИ</span>
-              </label>
-              <small style={{ color: '#8b8ea3', marginTop: '-10px', marginBottom: '22px' }}>
-                Если отключено, ИИ не будет отвечать автоматически. Вы сможете отвечать вручную от имени ИИ.
-              </small>
-
               <button
                 className="btn-primary"
                 onClick={saveSettings}
@@ -359,6 +369,21 @@ function AdminPanel() {
                       <span style={{ color: '#666', fontSize: '0.85rem' }}>
                         👤 {selectedChat.userId} • 💬 {selectedChat.messages.length}
                       </span>
+                      <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: '#8b8ea3' }}>
+                          <input
+                            type="checkbox"
+                            checked={!selectedChat.autoReplyDisabled}
+                            onChange={(e) => toggleAutoReply(selectedChat._id, !e.target.checked)}
+                            disabled={togglingAutoReply}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <span>Авто-ответы ИИ</span>
+                        </label>
+                        {selectedChat.autoReplyDisabled && (
+                          <span className="badge badge-warning">Отключено</span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="chat-detail-messages">

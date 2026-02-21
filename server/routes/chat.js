@@ -39,8 +39,8 @@ router.post('/', async (req, res) => {
     }
 
     console.log('Getting AI response...');
-    // Get AI response
-    const aiResponse = await getAiResponse(chat.messages);
+    // Get AI response (pass chat to check autoReplyDisabled)
+    const aiResponse = await getAiResponse(chat.messages, chat);
     console.log('AI response received:', aiResponse ? aiResponse.substring(0, 50) : 'null');
 
     // Add AI message only if auto-reply is enabled

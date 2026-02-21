@@ -30,6 +30,10 @@ const chatSchema = new mongoose.Schema({
     default: 'New Chat'
   },
   messages: [messageSchema],
+  autoReplyDisabled: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

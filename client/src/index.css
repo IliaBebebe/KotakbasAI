@@ -1062,37 +1062,68 @@ body {
 
   /* Admin panel mobile */
   .admin-content {
-    padding: 16px;
+    padding: 12px;
   }
 
   .chats-layout {
     flex-direction: column;
     height: auto;
+    gap: 12px;
   }
 
   .chats-sidebar {
     width: 100%;
-    max-height: 300px;
+    max-height: 250px;
     border-radius: 12px;
   }
 
   .chat-detail {
     border-radius: 12px;
+    min-height: 500px;
   }
 
   .chat-detail-header {
-    padding: 16px;
+    padding: 14px;
+  }
+
+  .chat-detail-header strong {
+    font-size: 1rem;
   }
 
   .chat-detail-messages {
-    padding: 16px;
+    padding: 12px;
+    max-height: 400px;
   }
 
   .chat-detail-reply {
-    padding: 16px;
+    padding: 14px;
+  }
+
+  .chat-detail-reply input {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .btn-success {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+
+  .settings-form {
+    padding: 12px;
   }
 
   .settings-form textarea {
-    min-height: 160px;
+    min-height: 140px;
+    padding: 12px;
+  }
+
+  .settings-form input {
+    padding: 12px;
+  }
+
+  .btn-primary {
+    width: 100%;
+    justify-content: center;
   }
 }
