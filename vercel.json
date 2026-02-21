@@ -28,7 +28,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/client/dist/$1"
+      "dest": "/$1"
     }
   ],
   "buildCommand": "npm install && npm run build"
