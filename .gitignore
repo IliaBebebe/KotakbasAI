@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .env
+.env.local
+.env.*.local
 .DS_Store
 *.log
 
@@ -9,3 +11,6 @@ DEPLOY.md
 DEPLOYMENT_CHECKLIST.md
 CONTEXT.md
 API.md
+
+# MCP configuration
+.mcp.json
