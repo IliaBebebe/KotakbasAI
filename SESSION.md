@@ -17,6 +17,7 @@
 - **PWA** (Progressive Web App)
 - **Hamburger меню** для мобильных
 - **Переключатель авто-ответов** для каждого чата
+- **WebSocket real-time обновления** (socket.io)
 - Full Stack деплой на Render ИЛИ Vercel
 
 ---
@@ -35,14 +36,16 @@ MongoDB: Atlas (rex_corp / j52zsm%Z)
 
 | Файл | Что делает |
 |------|------------|
-| `client/src/pages/ChatPage.jsx` | Чат с ИИ + hamburger меню |
-| `client/src/pages/AdminPanel.jsx` | Админка с переключателем авто-ответов |
-| `client/src/index.css` | Стили (сине-серая тема + mobile responsive) |
+| `client/src/pages/ChatPage.jsx` | Чат с ИИ + hamburger меню + WebSocket |
+| `client/src/pages/AdminPanel.jsx` | Админка + WebSocket + переключатель авто-ответов |
+| `client/src/index.css` | Стили (сине-серая тема + mobile responsive + safe area) |
 | `client/index.html` | PWA meta теги |
 | `client/public/manifest.json` | PWA манифест |
 | `server/services/ai.js` | Логика ИИ + fallback + проверка autoReplyDisabled |
-| `server/routes/admin.js` | Админ API + toggle-auto-reply endpoint |
-| `server/index.js` | Express + CORS + serving статики |
+| `server/routes/admin.js` | Админ API + toggle-auto-reply + WebSocket emit |
+| `server/routes/chat.js` | Chat API + WebSocket emit |
+| `server/socket.js` | WebSocket сервер (socket.io) |
+| `server/index.js` | Express + CORS + serving статики + WebSocket init |
 | `api/index.js` | Chat API (Vercel serverless) |
 | `api/admin.js` | Admin API (Vercel serverless) |
 | `.env` | Ключи и подключения |
@@ -99,6 +102,8 @@ npm start          # Запуск продакшена (Render)
 | Render холодный старт | UptimeRobot для пинга или upgrade к Starter |
 | Мобильное меню не работает | Проверить z-index в CSS, очистить кэш |
 | Input не работает на iPhone | Убедиться, что font-size: 16px в input |
+| WebSocket не подключается | Проверить CORS в `server/socket.js`, transports: ['websocket', 'polling'] |
+| Сообщения не обновляются | Проверить WebSocket логи в консоли, emit события в routes |
 
 ---
 
@@ -130,6 +135,8 @@ npm start          # Запуск продакшена (Render)
 8. [ ] API routes работают (Vercel)
 9. [ ] Мобильное меню работает (hamburger)
 10. [ ] PWA manifest загружается
+11. [ ] WebSocket подключён (логи в консоли)
+12. [ ] Real-time обновления работают (админ ↔ пользователь)
 
 ---
 
@@ -137,8 +144,8 @@ npm start          # Запуск продакшена (Render)
 
 ### Render
 ```
-server/index.js → Express → API + Static (client/dist)
-                        ↓
+server/index.js → Express + Socket.IO → API + Static (client/dist)
+                              ↓
                    MongoDB Atlas → OpenRouter
 ```
 
@@ -151,6 +158,8 @@ client/dist/    → Static     → Frontend
                    MongoDB Atlas → OpenRouter
 ```
 
+**WebSocket на Vercel:** Не поддерживается serverless. Использовать Render для full-stack с WebSocket.
+
 ---
 
 ## 📱 PWA особенности
@@ -159,7 +168,8 @@ client/dist/    → Static     → Frontend
 - `apple-mobile-web-app-capable: yes`
 - `apple-mobile-web-app-status-bar-style: black-translucent`
 - `apple-touch-icon` для иконки на домашнем экране
-- `viewport-fit: cover` для safe area
+- `viewport-fit=cover` для safe area
+- CSS: `env(safe-area-inset-*)` для отступов
 
 ### Android Chrome
 - `manifest.json` с иконками
@@ -187,5 +197,34 @@ client/dist/    → Static     → Frontend
 
 ---
 
+## 🔌 WebSocket Events
+
+### Клиент → Сервер
+| Событие | Описание |
+|---------|----------|
+| `user:join` | Пользователь входит в room `user:{userId}` |
+| `admin:join` | Админ входит в room `admin:room` |
+
+### Сервер → Клиент
+| Событие | Кому | Описание |
+|---------|------|----------|
+| `chat:new_message` | Пользователь | Новое сообщение в чате |
+| `chat:list_updated` | Пользователь | Обновить список чатов |
+| `admin:new_message` | Админ | Новое сообщение в любом чате |
+| `admin:chat_list_updated` | Админ | Обновить список чатов |
+
+---
+
+## 🎨 UI Обновления
+
+- **Textarea** вместо input — авто-расширение до 200px
+- **Кнопка отправки** — только иконка (48×48px)
+- **Иконки** вместо эмодзи (Feather Icons via react-icons)
+- **Admin button** — только иконка ⚙️
+- **Safe area insets** — корректные отступы для iOS
+
+---
+
 **Совет:** Всегда проверяйте мобильную версию в DevTools (F12) и на реальном устройстве.
 **Для Vercel:** Проверьте Environment Variables в Dashboard!
+**Для WebSocket:** Использовать Render для production (Vercel serverless не поддерживает WebSocket).
