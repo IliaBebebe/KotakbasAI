@@ -81,7 +81,7 @@ function AdminPanel() {
 
     // Listen for new messages from any chat
     socketRef.current.on('admin:new_message', (data) => {
-      console.log('📥 Admin received new_message:', data);
+      console.log('📥 Admin received admin:new_message:', data);
       // Reload chats to show updated list
       if (activeTab === 'chats') {
         loadChats();
@@ -89,6 +89,14 @@ function AdminPanel() {
       // If viewing this specific chat, reload its details
       if (selectedChat && data.chatId === selectedChat._id) {
         loadChatDetails(data.chatId);
+      }
+    });
+
+    // Listen for chat list updates
+    socketRef.current.on('admin:chat_list_updated', () => {
+      console.log('📥 Admin received admin:chat_list_updated');
+      if (activeTab === 'chats') {
+        loadChats();
       }
     });
 
@@ -105,6 +113,7 @@ function AdminPanel() {
         console.log('🧹 Cleaning up Admin WebSocket');
         socketRef.current.off('connect');
         socketRef.current.off('admin:new_message');
+        socketRef.current.off('admin:chat_list_updated');
         socketRef.current.off('connect_error');
         socketRef.current.off('disconnect');
       }

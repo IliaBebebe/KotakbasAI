@@ -15,9 +15,13 @@ const emitNewMessage = (chatId, userId, message) => {
     io.to(`user:${userId}`).emit('chat:new_message', { chatId, message });
     console.log(`   ✓ Emitted to user:${userId}`);
     
-    // Emit to all admins
+    // Emit to all admins - new message event
     io.to('admin:room').emit('admin:new_message', { chatId, userId, message });
-    console.log(`   ✓ Emitted to admin:room`);
+    console.log(`   ✓ Emitted admin:new_message to admin:room`);
+    
+    // Also emit chat list update to admins
+    io.to('admin:room').emit('admin:chat_list_updated');
+    console.log(`   ✓ Emitted admin:chat_list_updated to admin:room`);
   } catch (error) {
     console.error('❌ Error emitting new_message:', error.message);
   }
