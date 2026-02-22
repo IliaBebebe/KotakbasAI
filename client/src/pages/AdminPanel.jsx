@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { FiSettings, FiMessageSquare, FiLock, FiLogOut, FiHome, FiSend, FiTrash2, FiSave, FiEdit2, FiCheck, FiMenu, FiX, FiSend as FiSendIcon } from 'react-icons/fi';
+import { io } from 'socket.io-client';
 
 const API_URL = '/api/admin';
 const ADMIN_PASSWORD = encodeURIComponent('Жопа');
+const SOCKET_URL = window.location.origin;
 
 function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -14,6 +16,7 @@ function AdminPanel() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const socketRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState('settings');
   const [settings, setSettings] = useState({
@@ -48,6 +51,60 @@ function AdminPanel() {
     if (isAuthenticated && activeTab === 'chats') {
       loadChats();
     }
+  }, [isAuthenticated, activeTab]);
+
+  // WebSocket connection for admin
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Connect to WebSocket
+    socketRef.current = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('🔌 Admin WebSocket connected:', socketRef.current.id);
+      // Join admin room
+      socketRef.current.emit('admin:join');
+    });
+
+    // Listen for new messages from any chat
+    socketRef.current.on('admin:new_message', (data) => {
+      console.log('📥 Admin received new_message:', data);
+      // Reload chats to show updated list
+      if (activeTab === 'chats') {
+        loadChats();
+      }
+      // If viewing this specific chat, reload its details
+      if (selectedChat?._id === data.chatId) {
+        loadChatDetails(data.chatId);
+      }
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.warn('⚠️ Admin WebSocket connection error:', error.message);
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        console.log('🔌 Admin WebSocket disconnected');
+      }
+    };
+  }, [isAuthenticated, activeTab, selectedChat?._id]);
+
+  // Periodic chats sync for admin (every 15 seconds)
+  useEffect(() => {
+    if (!isAuthenticated || activeTab !== 'chats') return;
+
+    const intervalId = setInterval(() => {
+      loadChats();
+    }, 15000);
+
+    return () => clearInterval(intervalId);
   }, [isAuthenticated, activeTab]);
 
   // Auto-resize textarea

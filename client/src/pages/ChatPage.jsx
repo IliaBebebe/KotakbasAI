@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { FiSend, FiPlus, FiMessageSquare, FiSettings, FiHome, FiMenu, FiX, FiSend as FiSendIcon } from 'react-icons/fi';
+import { io } from 'socket.io-client';
 
 const API_URL = '/api/chat';
+const SOCKET_URL = window.location.origin;
 
 function ChatPage() {
   const [chats, setChats] = useState([]);
@@ -16,6 +18,7 @@ function ChatPage() {
     return localStorage.getItem('kotakbas_userId') || null;
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const socketRef = useRef(null);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -29,10 +32,82 @@ function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
+  // WebSocket connection
   useEffect(() => {
-    if (userId) {
+    if (!userId) return;
+
+    // Connect to WebSocket
+    socketRef.current = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('🔌 WebSocket connected:', socketRef.current.id);
+      // Join user room
+      socketRef.current.emit('user:join', userId);
+    });
+
+    // Listen for new messages from server
+    socketRef.current.on('chat:new_message', (data) => {
+      console.log('📥 Received new_message:', data);
+      // Only add message if it's for current chat and has content
+      if (data.chatId === currentChat && data.message.content) {
+        setMessages(prev => {
+          // Check if message already exists (prevent duplicates)
+          const exists = prev.some(m => 
+            m.role === data.message.role && 
+            m.content === data.message.content
+          );
+          if (!exists) {
+            return [...prev, { ...data.message, createdAt: new Date(data.message.createdAt) }];
+          }
+          return prev;
+        });
+      }
+      setLoading(false);
+    });
+
+    // Listen for chat list updates
+    socketRef.current.on('chat:list_updated', () => {
+      console.log('📥 Received list_updated');
       loadChats();
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.warn('⚠️ WebSocket connection error:', error.message);
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        console.log('🔌 WebSocket disconnected');
+      }
+    };
+  }, [userId, currentChat]);
+
+  // Reconnect WebSocket when userId changes
+  useEffect(() => {
+    if (userId && socketRef.current?.connected) {
+      socketRef.current.emit('user:join', userId);
     }
+  }, [userId]);
+
+  // Periodic chat list sync (fallback + keep updated)
+  useEffect(() => {
+    if (!userId) return;
+
+    // Initial load
+    loadChats();
+
+    // Poll every 10 seconds for chat list updates
+    const intervalId = setInterval(() => {
+      loadChats();
+    }, 10000);
+
+    return () => clearInterval(intervalId);
   }, [userId]);
 
   useEffect(() => {

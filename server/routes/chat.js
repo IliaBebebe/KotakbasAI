@@ -2,21 +2,47 @@ const express = require('express');
 const router = express.Router();
 const Chat = require('../models/Chat');
 const { getAiResponse } = require('../services/ai');
+const { getIO } = require('../socket');
+
+// Emit message to user and admin rooms
+const emitNewMessage = (chatId, userId, message) => {
+  try {
+    const io = getIO();
+    // Emit to specific user
+    io.to(`user:${userId}`).emit('chat:new_message', { chatId, message });
+    // Emit to all admins
+    io.to('admin:room').emit('admin:new_message', { chatId, userId, message });
+    console.log(`📤 Emitted new_message for chat ${chatId}`);
+  } catch (error) {
+    console.error('Error emitting new_message:', error);
+  }
+};
+
+// Emit chat list update to user
+const emitChatListUpdate = (userId) => {
+  try {
+    const io = getIO();
+    io.to(`user:${userId}`).emit('chat:list_updated');
+    console.log(`📤 Emitted list_updated for user ${userId}`);
+  } catch (error) {
+    console.error('Error emitting list_updated:', error);
+  }
+};
 
 // Create new chat or get existing
 router.post('/', async (req, res) => {
   try {
     const { chatId, message, userId } = req.body;
-    
+
     console.log('Received request:', { chatId, message, userId });
-    
+
     if (!message) {
       return res.status(400).json({ error: 'Сообщение обязательно' });
     }
 
     let chat;
     const newUserId = userId || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     if (chatId) {
       chat = await Chat.findOne({ _id: chatId });
       if (!chat) {
@@ -27,11 +53,12 @@ router.post('/', async (req, res) => {
     }
 
     // Add user message
-    chat.messages.push({
+    const userMessage = {
       role: 'user',
       content: message,
       isAiGenerated: false
-    });
+    };
+    chat.messages.push(userMessage);
 
     // Update title if first message
     if (chat.messages.length === 1) {
@@ -43,22 +70,45 @@ router.post('/', async (req, res) => {
     const aiResponse = await getAiResponse(chat.messages, chat);
     console.log('AI response received:', aiResponse ? aiResponse.substring(0, 50) : 'null');
 
+    let responseMessage = aiResponse;
+
     // Add AI message only if auto-reply is enabled
     if (aiResponse !== null) {
-      chat.messages.push({
+      const aiMessage = {
         role: 'assistant',
         content: aiResponse,
         isAiGenerated: true
-      });
+      };
+      chat.messages.push(aiMessage);
+      responseMessage = aiResponse;
+    } else {
+      // If auto-reply is disabled, still return null but don't add empty message
+      responseMessage = null;
     }
 
     await chat.save();
     console.log('Chat saved:', chat._id);
 
+    // Emit WebSocket events only if there's a response message
+    const finalUserId = userId || newUserId;
+    if (responseMessage !== null) {
+      emitNewMessage(chat._id, finalUserId, {
+        role: 'assistant',
+        content: responseMessage,
+        isAiGenerated: true,
+        createdAt: new Date()
+      });
+    }
+
+    // Emit chat list update if new chat
+    if (!chatId) {
+      emitChatListUpdate(finalUserId);
+    }
+
     res.json({
       chatId: chat._id,
-      userId: chat.userId,
-      message: aiResponse
+      userId: finalUserId,
+      message: responseMessage
     });
   } catch (error) {
     console.error('Chat error:', error);

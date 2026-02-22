@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Settings = require('../models/Settings');
 const Chat = require('../models/Chat');
+const { getIO } = require('../socket');
 
 // Simple password check (password: Жопа)
 const ADMIN_PASSWORD = 'Жопа';
@@ -13,6 +14,17 @@ function checkAuth(req, res, next) {
   }
   return res.status(401).json({ error: 'Неверный пароль' });
 }
+
+// Emit admin reply to user
+const emitAdminReply = (chatId, userId, message) => {
+  try {
+    const io = getIO();
+    io.to(`user:${userId}`).emit('chat:new_message', { chatId, message });
+    console.log(`📤 Emitted admin_reply for chat ${chatId} to user ${userId}`);
+  } catch (error) {
+    console.error('Error emitting admin_reply:', error);
+  }
+};
 
 // Get settings
 router.get('/settings', checkAuth, async (req, res) => {
@@ -83,7 +95,7 @@ router.get('/chats/:id', checkAuth, async (req, res) => {
 router.post('/chats/:id/reply', checkAuth, async (req, res) => {
   try {
     const { message } = req.body;
-    
+
     if (!message) {
       return res.status(400).json({ error: 'Сообщение обязательно' });
     }
@@ -94,13 +106,18 @@ router.post('/chats/:id/reply', checkAuth, async (req, res) => {
     }
 
     // Add assistant message marked as NOT AI-generated (but user won't know)
-    chat.messages.push({
+    const adminMessage = {
       role: 'assistant',
       content: message,
-      isAiGenerated: false  // Hidden from user - appears as AI response
-    });
+      isAiGenerated: false,  // Hidden from user - appears as AI response
+      createdAt: new Date()
+    };
+    chat.messages.push(adminMessage);
 
     await chat.save();
+
+    // Emit WebSocket event to user
+    emitAdminReply(chat._id, chat.userId, adminMessage);
 
     res.json({
       success: true,

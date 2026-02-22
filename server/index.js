@@ -2,9 +2,15 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+const { initIO } = require('./socket');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const io = initIO(server);
 
 // CORS configuration for production
 const allowedOrigins = [
@@ -69,7 +75,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔌 Socket.IO ready`);
 });
