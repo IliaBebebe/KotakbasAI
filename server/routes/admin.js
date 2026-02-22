@@ -19,10 +19,13 @@ function checkAuth(req, res, next) {
 const emitAdminReply = (chatId, userId, message) => {
   try {
     const io = getIO();
+    console.log(`📤 Attempting to emit admin_reply to user:${userId}`);
+    console.log(`   chatId: ${chatId}, userId: ${userId}, message length: ${message?.content?.length || 0}`);
+    
     io.to(`user:${userId}`).emit('chat:new_message', { chatId, message });
-    console.log(`📤 Emitted admin_reply for chat ${chatId} to user ${userId}`);
+    console.log(`   ✓ Emitted admin_reply to user:${userId}`);
   } catch (error) {
-    console.error('Error emitting admin_reply:', error);
+    console.error('❌ Error emitting admin_reply:', error.message);
   }
 };
 

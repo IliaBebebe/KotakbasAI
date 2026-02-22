@@ -19,10 +19,16 @@ function ChatPage() {
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const socketRef = useRef(null);
+  const userIdRef = useRef(userId);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
+
+  // Keep userIdRef in sync
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,20 +38,28 @@ function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  // WebSocket connection
+  // WebSocket connection - only reconnect when userId changes
   useEffect(() => {
     if (!userId) return;
+
+    console.log('🔌 Initializing WebSocket for userId:', userId);
+
+    // Disconnect existing socket if any
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
 
     // Connect to WebSocket
     socketRef.current = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
+      forceNew: false
     });
 
     socketRef.current.on('connect', () => {
-      console.log('🔌 WebSocket connected:', socketRef.current.id);
+      console.log('✅ WebSocket connected:', socketRef.current.id);
       // Join user room
       socketRef.current.emit('user:join', userId);
     });
@@ -53,8 +67,8 @@ function ChatPage() {
     // Listen for new messages from server
     socketRef.current.on('chat:new_message', (data) => {
       console.log('📥 Received new_message:', data);
-      // Only add message if it's for current chat and has content
-      if (data.chatId === currentChat && data.message.content) {
+      // Only add message if it has content
+      if (data.message && data.message.content) {
         setMessages(prev => {
           // Check if message already exists (prevent duplicates)
           const exists = prev.some(m => 
@@ -62,17 +76,19 @@ function ChatPage() {
             m.content === data.message.content
           );
           if (!exists) {
+            console.log('➕ Adding new message to state');
             return [...prev, { ...data.message, createdAt: new Date(data.message.createdAt) }];
           }
+          console.log('⏭️ Message already exists, skipping');
           return prev;
         });
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     // Listen for chat list updates
     socketRef.current.on('chat:list_updated', () => {
-      console.log('📥 Received list_updated');
+      console.log('📥 Received list_updated - reloading chats');
       loadChats();
     });
 
@@ -80,13 +96,22 @@ function ChatPage() {
       console.warn('⚠️ WebSocket connection error:', error.message);
     });
 
+    socketRef.current.on('disconnect', (reason) => {
+      console.log('🔌 WebSocket disconnected:', reason);
+    });
+
     return () => {
       if (socketRef.current) {
-        socketRef.current.disconnect();
-        console.log('🔌 WebSocket disconnected');
+        console.log('🧹 Cleaning up WebSocket connection');
+        socketRef.current.off('connect');
+        socketRef.current.off('chat:new_message');
+        socketRef.current.off('chat:list_updated');
+        socketRef.current.off('connect_error');
+        socketRef.current.off('disconnect');
+        // Don't disconnect on unmount - keep connection alive
       }
     };
-  }, [userId, currentChat]);
+  }, [userId]); // Only depend on userId, NOT currentChat
 
   // Reconnect WebSocket when userId changes
   useEffect(() => {
@@ -190,17 +215,32 @@ function ChatPage() {
 
       const data = await res.json();
 
+      // Handle new userId if this is first message
       if (!userId && data.userId) {
+        console.log('🆕 Received new userId from server:', data.userId);
         localStorage.setItem('kotakbas_userId', data.userId);
         setUserId(data.userId);
+        // Rejoin room with new userId
+        if (socketRef.current?.connected) {
+          socketRef.current.emit('user:join', data.userId);
+        }
       }
 
       if (!currentChat && data.chatId) {
         setCurrentChat(data.chatId);
       }
 
-      const aiMessage = { role: 'assistant', content: data.message, isAiGenerated: true };
-      setMessages(prev => [...prev, aiMessage]);
+      // Add AI response if received (WebSocket will also send it)
+      if (data.message && data.message !== null) {
+        const aiMessage = { role: 'assistant', content: data.message, isAiGenerated: true, createdAt: new Date() };
+        setMessages(prev => {
+          const exists = prev.some(m => m.role === aiMessage.role && m.content === aiMessage.content);
+          if (!exists) {
+            return [...prev, aiMessage];
+          }
+          return prev;
+        });
+      }
 
       // Always reload chats to get updated list
       loadChats();

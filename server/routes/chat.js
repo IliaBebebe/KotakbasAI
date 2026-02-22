@@ -8,13 +8,18 @@ const { getIO } = require('../socket');
 const emitNewMessage = (chatId, userId, message) => {
   try {
     const io = getIO();
+    console.log(`📤 Attempting to emit new_message to user:${userId} and admin:room`);
+    console.log(`   chatId: ${chatId}, message length: ${message?.content?.length || 0}`);
+    
     // Emit to specific user
     io.to(`user:${userId}`).emit('chat:new_message', { chatId, message });
+    console.log(`   ✓ Emitted to user:${userId}`);
+    
     // Emit to all admins
     io.to('admin:room').emit('admin:new_message', { chatId, userId, message });
-    console.log(`📤 Emitted new_message for chat ${chatId}`);
+    console.log(`   ✓ Emitted to admin:room`);
   } catch (error) {
-    console.error('Error emitting new_message:', error);
+    console.error('❌ Error emitting new_message:', error.message);
   }
 };
 
@@ -22,10 +27,11 @@ const emitNewMessage = (chatId, userId, message) => {
 const emitChatListUpdate = (userId) => {
   try {
     const io = getIO();
+    console.log(`📤 Attempting to emit list_updated to user:${userId}`);
     io.to(`user:${userId}`).emit('chat:list_updated');
-    console.log(`📤 Emitted list_updated for user ${userId}`);
+    console.log(`   ✓ Emitted list_updated to user:${userId}`);
   } catch (error) {
-    console.error('Error emitting list_updated:', error);
+    console.error('❌ Error emitting list_updated:', error.message);
   }
 };
 

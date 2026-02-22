@@ -53,20 +53,28 @@ function AdminPanel() {
     }
   }, [isAuthenticated, activeTab]);
 
-  // WebSocket connection for admin
+  // WebSocket connection for admin - stable connection
   useEffect(() => {
     if (!isAuthenticated) return;
+
+    console.log('🔌 Initializing Admin WebSocket');
+
+    // Disconnect existing socket if any
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
 
     // Connect to WebSocket
     socketRef.current = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
+      forceNew: false
     });
 
     socketRef.current.on('connect', () => {
-      console.log('🔌 Admin WebSocket connected:', socketRef.current.id);
+      console.log('✅ Admin WebSocket connected:', socketRef.current.id);
       // Join admin room
       socketRef.current.emit('admin:join');
     });
@@ -79,7 +87,7 @@ function AdminPanel() {
         loadChats();
       }
       // If viewing this specific chat, reload its details
-      if (selectedChat?._id === data.chatId) {
+      if (selectedChat && data.chatId === selectedChat._id) {
         loadChatDetails(data.chatId);
       }
     });
@@ -88,13 +96,20 @@ function AdminPanel() {
       console.warn('⚠️ Admin WebSocket connection error:', error.message);
     });
 
+    socketRef.current.on('disconnect', (reason) => {
+      console.log('🔌 Admin WebSocket disconnected:', reason);
+    });
+
     return () => {
       if (socketRef.current) {
-        socketRef.current.disconnect();
-        console.log('🔌 Admin WebSocket disconnected');
+        console.log('🧹 Cleaning up Admin WebSocket');
+        socketRef.current.off('connect');
+        socketRef.current.off('admin:new_message');
+        socketRef.current.off('connect_error');
+        socketRef.current.off('disconnect');
       }
     };
-  }, [isAuthenticated, activeTab, selectedChat?._id]);
+  }, [isAuthenticated]); // Only depend on isAuthenticated
 
   // Periodic chats sync for admin (every 15 seconds)
   useEffect(() => {

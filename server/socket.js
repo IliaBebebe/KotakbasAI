@@ -24,17 +24,20 @@ function initIO(server) {
 
   io.on('connection', (socket) => {
     console.log('🔌 Socket connected:', socket.id);
+    console.log('   Rooms before join:', Array.from(socket.rooms));
 
     socket.on('user:join', (userId) => {
       connectedUsers.set(socket.id, userId);
       socket.join(`user:${userId}`);
       console.log(`👤 User ${userId} joined socket ${socket.id}`);
+      console.log('   Rooms after join:', Array.from(socket.rooms));
     });
 
     socket.on('admin:join', () => {
       connectedAdmins.add(socket.id);
       socket.join('admin:room');
       console.log(`🔧 Admin joined socket ${socket.id}`);
+      console.log('   Rooms after join:', Array.from(socket.rooms));
     });
 
     socket.on('disconnect', () => {
@@ -49,6 +52,13 @@ function initIO(server) {
       }
     });
   });
+
+  // Add debug: log connected sockets count periodically
+  setInterval(() => {
+    console.log(`📊 Socket.IO stats: ${io.engine.clientsCount} clients connected`);
+    console.log(`   Connected users: ${connectedUsers.size}`);
+    console.log(`   Connected admins: ${connectedAdmins.size}`);
+  }, 30000);
 
   return io;
 }
