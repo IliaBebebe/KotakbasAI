@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { FiSettings, FiMessageSquare, FiLock, FiLogOut, FiHome, FiSend, FiTrash2, FiSave, FiEdit2, FiCheck } from 'react-icons/fi';
+import { FiSettings, FiMessageSquare, FiLock, FiLogOut, FiHome, FiSend, FiTrash2, FiSave, FiEdit2, FiCheck, FiMenu, FiX, FiSend as FiSendIcon } from 'react-icons/fi';
 
 const API_URL = '/api/admin';
 const ADMIN_PASSWORD = encodeURIComponent('Жопа');
@@ -13,7 +13,8 @@ function AdminPanel() {
   });
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState('settings');
   const [settings, setSettings] = useState({
     systemPrompt: '',
@@ -29,6 +30,7 @@ function AdminPanel() {
   const [notification, setNotification] = useState(null);
 
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     if (selectedChat) {
@@ -47,6 +49,14 @@ function AdminPanel() {
       loadChats();
     }
   }, [isAuthenticated, activeTab]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+    }
+  }, [replyMessage]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -128,7 +138,7 @@ function AdminPanel() {
     try {
       const res = await fetch(`${API_URL}/chats/${selectedChat._id}/reply`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'x-admin-password': ADMIN_PASSWORD
         },
@@ -137,6 +147,10 @@ function AdminPanel() {
       await res.json();
       showNotification('Ответ отправлен!', 'success');
       setReplyMessage('');
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
       loadChatDetails(selectedChat._id);
       loadChats();
     } catch (error) {
@@ -195,6 +209,14 @@ function AdminPanel() {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  const NotificationIcon = () => {
+    return notification?.type === 'success' ? (
+      <FiCheck size={20} strokeWidth={3} />
+    ) : (
+      <FiX size={20} strokeWidth={3} />
+    );
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="login-modal">
@@ -206,16 +228,21 @@ function AdminPanel() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="🔒 Пароль"
+              placeholder="Пароль"
               autoFocus
             />
             <button type="submit">
               <FiCheck size={18} /> Войти
             </button>
           </form>
-          {loginError && <p className="error">⚠️ {loginError}</p>}
+          {loginError && (
+            <p className="error" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '14px' }}>
+              <FiX size={16} /> {loginError}
+            </p>
+          )}
           <Link to="/" style={{ display: 'block', marginTop: '24px', color: '#00d9a5', textDecoration: 'none', fontWeight: '500' }}>
-            ← Вернуться к чату
+            <FiHome size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+            Вернуться к чату
           </Link>
         </div>
       </div>
@@ -226,15 +253,57 @@ function AdminPanel() {
     <div className="app-container">
       {notification && (
         <div className={`notification ${notification.type}`}>
-          {notification.type === 'success' ? '✓' : '✕'} {notification.message}
+          <NotificationIcon /> {notification.message}
         </div>
       )}
+
+      {/* Mobile Menu Overlay */}
+      <div className={`mobile-menu-overlay ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(false)} />
+
+      {/* Mobile Menu */}
+      <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+        <div className="mobile-menu-header">
+          <h4>
+            <FiSettings size={24} />
+            Админ-панель
+          </h4>
+          <button className="close-menu-btn" onClick={() => setMobileMenuOpen(false)}>
+            <FiX size={24} />
+          </button>
+        </div>
+        <div className="chat-list">
+          <div
+            className={`chat-item ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
+          >
+            <FiSettings size={18} /> Настройки
+          </div>
+          <div
+            className={`chat-item ${activeTab === 'chats' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('chats'); setMobileMenuOpen(false); }}
+          >
+            <FiMessageSquare size={18} /> Все чаты
+          </div>
+        </div>
+        <div style={{ marginTop: 'auto' }}>
+          <Link to="/" className="admin-link" onClick={() => setMobileMenuOpen(false)}>
+            <FiHome size={18} />
+          </Link>
+          <div
+            className="admin-link"
+            onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+            style={{ cursor: 'pointer', borderTop: '1px solid #2a2a2a' }}
+          >
+            <FiLogOut size={18} />
+          </div>
+        </div>
+      </div>
 
       {/* Sidebar */}
       <div className="sidebar">
         <div className="sidebar-header">
           <h4>
-            <span className="logo-icon">⚙️</span>
+            <FiSettings size={24} />
             Админ-панель
           </h4>
           <p>Управление KotakbasAI</p>
@@ -256,15 +325,13 @@ function AdminPanel() {
         <div style={{ marginTop: 'auto' }}>
           <Link to="/" className="admin-link">
             <FiHome size={18} />
-            К чату
           </Link>
-          <div 
-            className="admin-link" 
+          <div
+            className="admin-link"
             onClick={handleLogout}
             style={{ cursor: 'pointer', borderTop: '1px solid #2a2a2a' }}
           >
             <FiLogOut size={18} />
-            Выйти
           </div>
         </div>
       </div>
@@ -272,6 +339,9 @@ function AdminPanel() {
       {/* Main Content */}
       <div className="chat-area">
         <div className="chat-header">
+          <button className="menu-toggle-btn" onClick={() => setMobileMenuOpen(true)}>
+            <FiMenu size={24} />
+          </button>
           <h5>
             {activeTab === 'settings' ? (
               <><FiSettings /> Настройки</>
@@ -285,7 +355,7 @@ function AdminPanel() {
           <div className="admin-content">
             <div className="settings-form">
               <label>
-                <FiEdit2 style={{ display: 'inline', marginRight: '6px' }} />
+                <FiEdit2 style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
                 Системный промт
               </label>
               <textarea
@@ -341,7 +411,8 @@ function AdminPanel() {
                     onClick={() => loadChatDetails(chat._id)}
                     style={{ justifyContent: 'space-between' }}
                   >
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FiMessageSquare size={16} style={{ flexShrink: 0 }} />
                       {chat.title}
                     </span>
                     <button
@@ -366,8 +437,8 @@ function AdminPanel() {
                   <>
                     <div className="chat-detail-header">
                       <strong>{selectedChat.title}</strong>
-                      <span style={{ color: '#666', fontSize: '0.85rem' }}>
-                        👤 {selectedChat.userId} • 💬 {selectedChat.messages.length}
+                      <span style={{ color: '#666', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+                        <span><FiMessageSquare size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />{selectedChat.messages.length}</span>
                       </span>
                       <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: '#8b8ea3' }}>
@@ -392,7 +463,7 @@ function AdminPanel() {
                           key={idx}
                           className={`message ${msg.role}`}
                           style={{
-                            background: msg.role === 'user' ? '#1a1a1a' : 
+                            background: msg.role === 'user' ? '#1a1a1a' :
                                        msg.isAiGenerated ? '#0f0f0f' : '#1a1500',
                             marginBottom: '16px',
                             padding: '14px 18px',
@@ -402,7 +473,11 @@ function AdminPanel() {
                         >
                           <div style={{ flex: 1 }}>
                             <div className="message-role" style={{ marginBottom: '6px' }}>
-                              {msg.role === 'user' ? '👤 Пользователь' : '🤖 Ассистент'}
+                              {msg.role === 'user' ? (
+                                <><FiMessageSquare size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> Пользователь</>
+                              ) : (
+                                <><FiSend size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> Ассистент</>
+                              )}
                               {!msg.isAiGenerated && msg.role === 'assistant' && (
                                 <span className="badge badge-warning">
                                   Ответ админа
@@ -430,24 +505,40 @@ function AdminPanel() {
                     {/* Admin Reply Input */}
                     <div className="chat-detail-reply">
                       <label>
-                        <FiSend style={{ display: 'inline', marginRight: '6px' }} />
+                        <FiSend style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
                         Ответить от имени ИИ
                       </label>
-                      <input
-                        type="text"
+                      <textarea
+                        ref={textareaRef}
                         value={replyMessage}
                         onChange={(e) => setReplyMessage(e.target.value)}
                         placeholder="Введите ваш ответ..."
-                        onKeyPress={(e) => e.key === 'Enter' && sendReply()}
+                        rows={1}
+                        onKeyDown={(e) => e.key === 'Enter' && sendReply()}
+                        style={{
+                          width: '100%',
+                          padding: '14px 18px',
+                          border: '2px solid #2f3240',
+                          borderRadius: '10px',
+                          fontSize: '0.95rem',
+                          marginBottom: '14px',
+                          background: '#1a1c23',
+                          color: '#fff',
+                          resize: 'none',
+                          minHeight: '48px',
+                          maxHeight: '200px',
+                          fontFamily: 'inherit',
+                          boxSizing: 'border-box'
+                        }}
                       />
                       <div className="reply-actions">
                         <button
                           className="btn-success"
                           onClick={sendReply}
                           disabled={sending || !replyMessage.trim()}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 16px' }}
                         >
-                          <FiSend size={16} />
-                          {sending ? 'Отправка...' : 'Отправить'}
+                          <FiSendIcon size={18} />
                         </button>
                       </div>
                       <small>
@@ -457,7 +548,7 @@ function AdminPanel() {
                   </>
                 ) : (
                   <div className="empty-state">
-                    <div className="empty-state-icon">💬</div>
+                    <div className="empty-state-icon"><FiMessageSquare size={80} /></div>
                     <h2>Выберите чат</h2>
                     <p>Выберите чат из списка слева, чтобы просмотреть переписку и ответить</p>
                   </div>

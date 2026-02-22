@@ -220,10 +220,8 @@ body {
   gap: 10px;
 }
 
-.chat-item::before {
-  content: '💬';
-  font-size: 1rem;
-  opacity: 0.7;
+.chat-item svg {
+  flex-shrink: 0;
 }
 
 .chat-item:hover {
@@ -238,12 +236,8 @@ body {
   box-shadow: 0 4px 15px rgba(0, 217, 165, 0.25);
 }
 
-.chat-item.active::before {
-  filter: brightness(0) invert(1);
-}
-
 .admin-link {
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-top: 1px solid #2f3240;
   color: #8b8ea3;
   text-decoration: none;
@@ -260,6 +254,10 @@ body {
 .admin-link:hover {
   background: #2f3240;
   color: #00d9a5;
+}
+
+.admin-link svg {
+  flex-shrink: 0;
 }
 
 /* Main Chat Area */
@@ -543,26 +541,25 @@ body {
 
 .input-form {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   max-width: 950px;
   margin: 0 auto;
   position: relative;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .input-wrapper {
   flex: 1;
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .input-wrapper::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 14px;
   width: 20px;
   height: 20px;
   background: #2f3240;
@@ -572,9 +569,9 @@ body {
   justify-content: center;
 }
 
-.input-form input {
+.input-form textarea {
   flex: 1;
-  padding: 18px 22px 18px 50px;
+  padding: 14px 18px 14px 45px;
   border: 2px solid #2f3240;
   border-radius: 16px;
   font-size: 1rem;
@@ -582,27 +579,31 @@ body {
   color: #fff;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
+  resize: none;
+  min-height: 48px;
+  max-height: 200px;
+  line-height: 1.5;
 }
 
-.input-form input::placeholder {
+.input-form textarea::placeholder {
   color: #6b6e8a;
 }
 
-.input-form input:focus {
+.input-form textarea:focus {
   outline: none;
   border-color: #00d9a5;
   background: #2a2d3f;
   box-shadow: 0 0 0 4px rgba(0, 217, 165, 0.1);
 }
 
-.input-form input:disabled {
+.input-form textarea:disabled {
   background: #2a2d3f;
   cursor: not-allowed;
   opacity: 0.7;
 }
 
 .input-form button {
-  padding: 18px 26px;
+  padding: 14px;
   background: linear-gradient(135deg, #00d9a5 0%, #00b894 100%);
   color: #1a1c23;
   border: none;
@@ -614,9 +615,9 @@ body {
   box-shadow: 0 4px 20px rgba(0, 217, 165, 0.3);
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 140px;
   justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
 }
 
 .input-form button:hover:not(:disabled) {
@@ -651,6 +652,9 @@ body {
   font-size: 5rem;
   margin-bottom: 24px;
   filter: grayscale(1) opacity(0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-state h2 {
@@ -1126,6 +1130,7 @@ body {
 .notification {
   position: fixed;
   top: 24px;
+  top: calc(24px + env(safe-area-inset-top, 0px));
   right: 24px;
   padding: 16px 24px;
   border-radius: 12px;
@@ -1226,14 +1231,17 @@ body {
     gap: 8px;
   }
 
-  .input-form input {
+  .input-form textarea {
     font-size: 16px; /* Prevents zoom on iPhone */
-    padding: 14px 18px;
+    padding: 12px 16px 12px 40px;
+    min-height: 44px;
+    max-height: 150px;
   }
 
   .input-form button {
-    padding: 14px 18px;
-    min-width: auto;
+    padding: 12px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   /* Admin panel mobile */
@@ -1308,6 +1316,14 @@ body {
   .btn-primary {
     width: 100%;
     justify-content: center;
+  }
+
+  /* Notification on mobile */
+  .notification {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 12px;
+    left: 12px;
+    padding: 14px 18px;
   }
 }
 

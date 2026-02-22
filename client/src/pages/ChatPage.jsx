@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { FiSend, FiPlus, FiMessageSquare, FiSettings, FiHome, FiMenu, FiX } from 'react-icons/fi';
+import { FiSend, FiPlus, FiMessageSquare, FiSettings, FiHome, FiMenu, FiX, FiSend as FiSendIcon } from 'react-icons/fi';
 
 const API_URL = '/api/chat';
 
@@ -16,9 +16,10 @@ function ChatPage() {
     return localStorage.getItem('kotakbas_userId') || null;
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,6 +43,14 @@ function ChatPage() {
       setMessages([]);
     }
   }, [currentChat]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+    }
+  }, [input]);
 
   const loadChats = async () => {
     try {
@@ -85,6 +94,11 @@ function ChatPage() {
     setInput('');
     setLoading(true);
 
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
     const newMessage = { role: 'user', content: userMessage, isAiGenerated: false };
     setMessages(prev => [...prev, newMessage]);
 
@@ -100,7 +114,7 @@ function ChatPage() {
       });
 
       const data = await res.json();
-      
+
       if (!userId && data.userId) {
         localStorage.setItem('kotakbas_userId', data.userId);
         setUserId(data.userId);
@@ -117,10 +131,10 @@ function ChatPage() {
       loadChats();
     } catch (error) {
       console.error('Не удалось отправить сообщение:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Извините, произошла ошибка. Пожалуйста, попробуйте снова.', 
-        isAiGenerated: true 
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Извините, произошла ошибка. Пожалуйста, попробуйте снова.',
+        isAiGenerated: true
       }]);
     } finally {
       setLoading(false);
@@ -136,7 +150,7 @@ function ChatPage() {
       <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="mobile-menu-header">
           <h4>
-            <span className="logo-icon">🧊</span>
+            <FiMessageSquare size={24} />
             KotakbasAI
           </h4>
           <button className="close-menu-btn" onClick={() => setMobileMenuOpen(false)}>
@@ -154,6 +168,7 @@ function ChatPage() {
               className={`chat-item ${currentChat === chat._id ? 'active' : ''}`}
               onClick={() => { selectChat(chat._id); setMobileMenuOpen(false); }}
             >
+              <FiMessageSquare size={16} />
               {chat.title}
             </div>
           ))}
@@ -165,7 +180,6 @@ function ChatPage() {
         </div>
         <Link to="/admin" className="admin-link" onClick={() => setMobileMenuOpen(false)}>
           <FiSettings size={18} />
-          Панель администратора
         </Link>
       </div>
 
@@ -173,7 +187,7 @@ function ChatPage() {
       <div className="sidebar">
         <div className="sidebar-header">
           <h4>
-            <span className="logo-icon">🧊</span>
+            <FiMessageSquare size={24} />
             KotakbasAI
           </h4>
           <p>Ваш персональный ассистент</p>
@@ -189,6 +203,7 @@ function ChatPage() {
               className={`chat-item ${currentChat === chat._id ? 'active' : ''}`}
               onClick={() => selectChat(chat._id)}
             >
+              <FiMessageSquare size={16} />
               {chat.title}
             </div>
           ))}
@@ -200,7 +215,6 @@ function ChatPage() {
         </div>
         <Link to="/admin" className="admin-link">
           <FiSettings size={18} />
-          Панель администратора
         </Link>
       </div>
 
@@ -222,7 +236,7 @@ function ChatPage() {
         <div className="messages-container" ref={messagesContainerRef}>
           {messages.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">🧊</div>
+              <div className="empty-state-icon"><FiMessageSquare size={80} /></div>
               <h2>Добро пожаловать</h2>
               <p>Я KotakbasAI — ваш умный помощник. Задайте любой вопрос, и я с радостью помогу!</p>
             </div>
@@ -232,9 +246,9 @@ function ChatPage() {
                 <div className="message-content-wrapper">
                   <div className="message-role">
                     {msg.role === 'user' ? (
-                      <>👤 Вы</>
+                      <><FiMessageSquare size={14} /> Вы</>
                     ) : (
-                      <>🤖 KotakbasAI</>
+                      <><FiSend size={14} /> KotakbasAI</>
                     )}
                   </div>
                   <div className="message-content">
@@ -254,7 +268,7 @@ function ChatPage() {
             <div className="message assistant">
               <div className="message-content-wrapper">
                 <div className="message-role">
-                  🤖 KotakbasAI
+                  <FiSend size={14} /> KotakbasAI
                 </div>
                 <div className="typing-indicator">
                   <span></span>
@@ -270,12 +284,13 @@ function ChatPage() {
         <div className="input-area">
           <form className="input-form" onSubmit={sendMessage}>
             <div className="input-wrapper">
-              <input
-                type="text"
+              <textarea
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Напишите сообщение..."
-                onKeyPress={(e) => {
+                rows={1}
+                onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage(e);
@@ -284,8 +299,7 @@ function ChatPage() {
               />
             </div>
             <button type="submit" disabled={!input.trim()}>
-              <FiSend size={18} strokeWidth={2.5} />
-              {loading ? 'Печать...' : 'Отправить'}
+              <FiSendIcon size={20} strokeWidth={2.5} />
             </button>
           </form>
         </div>
